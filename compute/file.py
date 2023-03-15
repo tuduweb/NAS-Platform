@@ -127,26 +127,26 @@ def exec_cmd_remote(_cmd, need_response=True):
     return stdout_str, stderr_str
 
 
-def detect_file_exit(ssh_name, ssh_password, ip, file_name):
-    _detect_cmd = 'sshpass -p \'%s\' ssh %s@%s ls -a' % (ssh_password, ssh_name, ip)
+def detect_file_exit(ssh_name, ssh_password, ip, file_name, port = 22):
+    _detect_cmd = 'sshpass -p \'%s\' ssh %s@%s  -p \'%s\' ls -a' % (ssh_password, ssh_name, ip, str(port))
     output = os.popen(_detect_cmd)
     ls_names_str = output.read()
     ls_names_arr = ls_names_str.split('\n')
     return True if file_name in ls_names_arr else False
 
 
-def init_work_dir(ssh_name, ssh_password, ip):
+def init_work_dir(ssh_name, ssh_password, ip, port = 22):
     Log.debug('Start to init the work directory in each worker')
     algo_name = get_algo_name()
-    if detect_file_exit(ssh_name, ssh_password, ip, algo_name):
+    if detect_file_exit(ssh_name, ssh_password, ip, algo_name, port):
         time_str = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
-        _bak_cmd = 'sshpass -p \'%s\' ssh %s@%s mv \'%s\' \'%s_bak_%s\'' % (
-            ssh_password, ssh_name, ip, get_top_dest_dir(), get_top_dest_dir(), time_str)
+        _bak_cmd = 'sshpass -p \'%s\' ssh %s@%s -p \'%s\' mv \'%s\' \'%s_bak_%s\'' % (
+            ssh_password, ssh_name, ip, str(port), get_top_dest_dir(), get_top_dest_dir(), time_str)
         _, stderr_ = exec_cmd_remote(_bak_cmd)
         Log.debug('Execute the cmd: %s' % (_bak_cmd))
         if stderr_ is not None:
             Log.warn(stderr_)
-    _mk_cmd = 'sshpass -p \'%s\' ssh %s@%s mkdir \'%s\'' % (ssh_password, ssh_name, ip, get_top_dest_dir())
+    _mk_cmd = 'sshpass -p \'%s\' ssh %s@%s -p \'%s\' mkdir \'%s\'' % (ssh_password, ssh_name, ip, str(port), get_top_dest_dir())
     _, stderr_ = exec_cmd_remote(_mk_cmd)
     Log.debug('Execute the cmd: %s' % (_mk_cmd))
     if stderr_ is not None:
@@ -168,27 +168,28 @@ def init_work_dir_on_all_workers():
         worker_ip = config.get(sec, 'worker_ip')
         ssh_name = config.get(sec, 'ssh_name')
         ssh_password = config.get(sec, 'ssh_password')
-        init_work_dir(ssh_name, ssh_password, worker_ip)
-        transfer_training_files(ssh_name, ssh_password, worker_ip)
+        ssh_port = config.get(sec, 'ssh_port')
+        init_work_dir(ssh_name, ssh_password, worker_ip, port = ssh_port)
+        transfer_training_files(ssh_name, ssh_password, worker_ip, port = ssh_port)
         if dataset not in ls_dataset:
-            transfer_dataset_image(ssh_name, ssh_password, worker_ip, dset_dir)
+            transfer_dataset_image(ssh_name, ssh_password, worker_ip, dset_dir, port = ssh_port)
 
 
-def makedirs(ssh_name, ssh_password, ip, dir_path):
-    _mk_cmd = 'sshpass -p \'%s\' ssh %s@%s mkdir -p \'%s\'' % (
-        ssh_password, ssh_name, ip, dir_path)
+def makedirs(ssh_name, ssh_password, ip, dir_path, port = 22):
+    _mk_cmd = 'sshpass -p \'%s\' ssh %s@%s -p \'%s\' mkdir -p \'%s\'' % (
+        ssh_password, ssh_name, ip, str(port), dir_path)
     Log.debug('Execute the cmd: %s' % (_mk_cmd))
     _, stderr_ = exec_cmd_remote(_mk_cmd)
     if stderr_ is not None:
         Log.warn(stderr_)
 
 
-def exec_python(ssh_name, ssh_password, ip, worker_name, py_file, args, python_exec=get_python_exec()):
+def exec_python(ssh_name, ssh_password, ip, worker_name, py_file, args, python_exec=get_python_exec(), port = 22):
     top_dir = get_top_dest_dir()
     py_file = os.path.join(top_dir, py_file).replace('~', '/home/' + ssh_name)
-    Log.info('Execute the remote python file [(%s)%s]' % (ip, py_file))
-    _exec_cmd = 'sshpass -p \'%s\' ssh %s@%s %s  \'%s\' %s' % (
-        ssh_password, ssh_name, worker_name, python_exec, py_file,
+    Log.info('Execute the remote python file [(%s:%s)%s]' % (ip, str(port), py_file))
+    _exec_cmd = 'sshpass -p \'%s\' ssh %s@%s -p \'%s\' %s  \'%s\' %s' % (
+        ssh_password, ssh_name, ip, str(port), python_exec, py_file,
         ' '.join([' '.join([k, v]) for k, v in args.items()]))
     Log.debug('Execute the cmd: %s' % (_exec_cmd))
     _stdout, _stderr = exec_cmd_remote(_exec_cmd, need_response=False)
@@ -202,7 +203,7 @@ def exec_python(ssh_name, ssh_password, ip, worker_name, py_file, args, python_e
     '''
 
 
-def transfer_file_relative(ssh_name, ssh_password, ip, worker_name, source, dest):
+def transfer_file_relative(ssh_name, ssh_password, ip, worker_name, source, dest, port = 22):
     """Use relative path to transfer file, both source and dest are relative path
     """
 
@@ -210,9 +211,9 @@ def transfer_file_relative(ssh_name, ssh_password, ip, worker_name, source, dest
     full_path_dest = os.path.join(top_dir, dest)
     full_path_source = os.path.join(get_local_path(), source)
     # full_path_source = full_path_source.replace(' ','\\\\ ')
-    makedirs(ssh_name, ssh_password, ip, os.path.dirname(full_path_dest))
-    _cmd = 'sshpass -p \'%s\' scp \'%s\' \'%s@%s:%s\'' % (
-        ssh_password, full_path_source, ssh_name, worker_name, full_path_dest)
+    makedirs(ssh_name, ssh_password, ip, os.path.dirname(full_path_dest), port)
+    _cmd = 'sshpass -p \'%s\' scp -P \'%s\' \'%s\' \'%s@%s:%s\'' % (
+        ssh_password, str(port), full_path_source, ssh_name, ip, full_path_dest)
     subprocess.Popen(_cmd, stdout=subprocess.PIPE, shell=True).stdout.read().decode()
 
 
@@ -239,9 +240,9 @@ def sftp_transfer(sftp_sess, src_path, dst_path):
     sftp_sess.put(src_path, dst_path)
 
 
-def transfer_training_files(ssh_name, ssh_password, worker_ip):
+def transfer_training_files(ssh_name, ssh_password, worker_ip, port = 22):
     training_file_dep = [(v, v) for _, v in get_training_file_dependences().items()]
-    transport = paramiko.Transport((worker_ip, 22))
+    transport = paramiko.Transport((worker_ip, int(port)))
     transport.connect(username=ssh_name, password=ssh_password)
     sftp = paramiko.SFTPClient.from_transport(transport)
     sftp.chdir('/')
@@ -261,8 +262,8 @@ def transfer_training_files(ssh_name, ssh_password, worker_ip):
     transport.close()
 
 
-def transfer_dataset_image(ssh_name, ssh_password, worker_ip, source):
-    transport = paramiko.Transport((worker_ip, 22))
+def transfer_dataset_image(ssh_name, ssh_password, worker_ip, source, port = 22):
+    transport = paramiko.Transport((worker_ip, int(port)))
     transport.connect(username=ssh_name, password=ssh_password)
     sftp = paramiko.SFTPClient.from_transport(transport)
     sftp.chdir('.')

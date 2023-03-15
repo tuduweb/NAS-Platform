@@ -20,9 +20,11 @@ def get_gpu_info():
             worker_name = config.get(sec, 'worker_name')
             ssh_name = config.get(sec, 'ssh_name')
             ssh_password = config.get(sec, 'ssh_password')
+            ssh_port = config.get(sec, 'ssh_port')
+
             gpu = [int(_id) for _id in config.get(sec, 'gpu').split(',')]
             content = {'worker_ip': worker_ip, 'worker_name': worker_name, 'ssh_name': ssh_name,
-                       'ssh_password': ssh_password, 'gpu': gpu}
+                       'ssh_password': ssh_password, 'gpu': gpu, 'ssh_port': ssh_port}
             info[sec] = content
         except BaseException as e:
             print(e)
@@ -238,9 +240,11 @@ def detect_gpu():
         worker_name = gpu_info[each_work]['worker_name']
         ssh_name = gpu_info[each_work]['ssh_name']
         ssh_password = gpu_info[each_work]['ssh_password']
+        ssh_port = gpu_info[each_work]['ssh_port']
+
         gpus = gpu_info[each_work]['gpu']
 
-        _cmd = 'sshpass -p \'%s\' ssh %s@%s nvidia-smi' % (ssh_password, ssh_name, worker_name)
+        _cmd = 'sshpass -p \'%s\' ssh %s@%s -p \'%s\' nvidia-smi' % (ssh_password, ssh_name, ip, str(ssh_port))
         nvidia_info = subprocess.Popen(_cmd, stdout=subprocess.PIPE, shell=True).stdout.read().decode()
         Log.debug('Perform the cmd \'%s\'' % (_cmd))
         Log.debug('Response:\n%s' % (nvidia_info))

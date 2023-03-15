@@ -115,16 +115,18 @@ class PIDManager():
                 ginfo = PIDManager.gpu_info[worker_ip]
                 ssh_name = ginfo['ssh_name']
                 ssh_passwd = ginfo['ssh_password']
-                
-                remote_cmd = 'sshpass -p {ssh_passwd} ssh {ssh_name}@{worker_ip} kill -TERM -- -{PID}'.format(
+                ssh_port = ginfo['ssh_port']
+
+                remote_cmd = 'sshpass -p {ssh_passwd} ssh {ssh_name}@{worker_ip} -p {port} kill -TERM -- -{PID}'.format(
                     ssh_name = ssh_name,
                     ssh_passwd = ssh_passwd,
                     worker_ip = worker_ip,
+                    port = ssh_port,
                     PID = worker_pid
                 )
-                Log.debug('killing PID({PID}) in {worker_ip}'.format(PID=worker_pid, worker_ip = worker_ip))    
+                Log.debug('killing PID({PID}) in {worker_ip}:{port}'.format(PID=worker_pid, worker_ip = worker_ip, port = ssh_port))
                 _, std_err = exec_cmd_remote(remote_cmd, need_response=True)
-            
+
                 if std_err:
                     Log.warn(std_err)
                 
