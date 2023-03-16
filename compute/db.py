@@ -28,6 +28,7 @@ def init_db():
                                worker                VARCHAR(250),		     
                                ssh_name              VARCHAR(250),
                                ssh_password          VARCHAR(250),
+                               ssh_port              VARCHAR(250),
                                gpu_id                int(8),
                                status                int(8),
                                remark                text,
@@ -87,19 +88,20 @@ def add_info(gpu_info, info):
         worker = each_one['worker_ip']
         ssh_name = gpu_info[each_one['worker_ip']]['ssh_name']
         ssh_password = gpu_info[each_one['worker_ip']]['ssh_password']
+        ssh_port = gpu_info[each_one['worker_ip']]['ssh_port']
         gpu_id = each_one['gpu_id']
         status = each_one['status']
         remark = each_one['remark']
 
         if status == 0:
-            sql_gpu_list = 'INSERT INTO gpu_list(alg_name, worker, ssh_name, ssh_password, gpu_id, status, remark, time) values (\'%s\', \'%s\', \'%s\', \'%s\', %d, %d, \'%s\', \'%s\')' % (
-                alg_name, worker, ssh_name, ssh_password, gpu_id, status, remark, time_str
+            sql_gpu_list = 'INSERT INTO gpu_list(alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, remark, time) values (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %d, %d, \'%s\', \'%s\')' % (
+                alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, remark, time_str
             )
             Log.debug('Execute sql: %s' % (sql_gpu_list))
             cu.execute(sql_gpu_list)
 
-        sql_gpu_archiv_list = 'INSERT INTO gpu_arxiv_list(alg_name, worker, ssh_name, ssh_password, gpu_id, status, remark, time) values (\'%s\', \'%s\', \'%s\', \'%s\', %d, %d, \'%s\', \'%s\')' % (
-            alg_name, worker, ssh_name, ssh_password, gpu_id, status, remark, time_str
+        sql_gpu_archiv_list = 'INSERT INTO gpu_arxiv_list(alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, remark, time) values (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %d, %d, \'%s\', \'%s\')' % (
+            alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, remark, time_str
         )
         Log.debug('Execute sql: %s' % (sql_gpu_archiv_list))
         cu.execute(sql_gpu_archiv_list)
@@ -110,7 +112,7 @@ def add_info(gpu_info, info):
 def get_available_gpus():
     alg_config = AlgorithmConfig()
     alg_name = alg_config.read_ini_file('name')
-    sql = 'select id, worker as worker_ip, gpu_id, ssh_name, ssh_password from gpu_list where alg_name=\'%s\'' % (
+    sql = 'select id, worker as worker_ip, gpu_id, ssh_name, ssh_password, ssh_port from gpu_list where alg_name=\'%s\'' % (
         alg_name)
     Log.debug('Execute sql: %s' % (sql))
     conn = sqlite3.connect(get_db_path())

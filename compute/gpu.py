@@ -280,7 +280,7 @@ def locate_gpu_to_be_used():
         Log.debug('Delete the used gpu from the list')
         confirmed_used_gpu([str(located_gpu[0])])
         chosen_gpu = {'worker_ip': located_gpu[1], 'gpu_id': located_gpu[2], 'ssh_name': located_gpu[3],
-                      'ssh_password': located_gpu[4]}
+                      'ssh_password': located_gpu[4], 'ssh_port': located_gpu[5]}
         Log.info('%d available GPUs, the selected is: GPU#%d on %s' % (
         len(available_gpus), int(chosen_gpu['gpu_id']), chosen_gpu['worker_ip']))
         return chosen_gpu

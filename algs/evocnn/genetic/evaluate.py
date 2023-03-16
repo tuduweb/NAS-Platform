@@ -28,7 +28,7 @@ class FitnessEvaluate(object):
             if _key in _map:
                 _count += 1
                 _acc = _map[_key]
-                self.log.info('Hit the cache for %s, key:%s, acc:%.5f, assigned_acc:%.5f'%(indi.id, _key, _acc, indi.acc))
+                self.log.info('Hit the cache for %s, key:%s, acc:%.5f, assigned_acc:%.5f'%(indi.id, _key, _acc, indi.acc_mean))
                 CacheToResultFile.do(indi.id, _acc)
                 indi.acc_mean = _acc
         self.log.info('Total hit %d individuals for fitness'%(_count))
