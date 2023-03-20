@@ -1,3 +1,5 @@
 algs_bak/
 runtime/
 __pycache__
+__init__.py
+*.png
