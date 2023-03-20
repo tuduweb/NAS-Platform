@@ -13,12 +13,13 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import torch.utils.data as tdata
 
 from train.dataset.dataloader import BaseDataloader
+from train.dataset.cutout import Cutout
 
 class CIFAR100(BaseDataloader):
     def __init__(self):
         super(CIFAR100, self).__init__()
         self.root = os.path.expanduser('~/dataset/cifar100/')
-        self.input_size = [32, 32, 3]
+        self.input_size = [32, 32, 64]
         self.out_cls_num = 100
 
     def get_train_dataloader(self):
@@ -103,7 +104,11 @@ class CIFAR100(BaseDataloader):
             mean=[0.4914, 0.4822, 0.4465],
             std=[0.2023, 0.1994, 0.2010],
         )
-
+        '''
+        normalize = transforms.Normalize(
+            np.array([125.3, 123.0, 113.9]) / 255.0,
+            np.array([63.0, 62.1, 66.7]) / 255.0)
+        '''
         # define transforms
         valid_transform = transforms.Compose([
                 transforms.ToTensor(),
@@ -115,7 +120,18 @@ class CIFAR100(BaseDataloader):
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 normalize,
+                Cutout(n_holes=1, length=16),
             ])
+            '''
+            train_transform = transforms.Compose([
+                transforms.Pad(4, padding_mode='reflect'),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomCrop(32),
+                transforms.ToTensor(),
+                normalize,
+                Cutout(n_holes=1, length=16),
+            ])
+            '''
         else:
             train_transform = transforms.Compose([
                 transforms.ToTensor(),
@@ -137,9 +153,9 @@ class CIFAR100(BaseDataloader):
         indices = list(range(num_train))
         split = int(np.floor(valid_size * num_train))
 
-        if shuffle:
+      #  if shuffle:
             #np.random.seed(random_seed)
-            np.random.shuffle(indices)
+       #     np.random.shuffle(indices)
 
         train_idx, valid_idx = indices[split:], indices[:split]
         train_sampler = SubsetRandomSampler(train_idx)
@@ -182,15 +198,29 @@ class CIFAR100(BaseDataloader):
             mean=[0.4914, 0.4822, 0.4465],
             std=[0.2023, 0.1994, 0.2010],
         )
-
+        '''
+        normalize = transforms.Normalize(
+            np.array([125.3, 123.0, 113.9]) / 255.0,
+            np.array([63.0, 62.1, 66.7]) / 255.0)
+        '''
         # define transform
         train_transform = transforms.Compose([
                 transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 normalize,
+                Cutout(n_holes=1, length=16),
             ])
-
+        '''
+        train_transform = transforms.Compose([
+            transforms.Pad(4, padding_mode='reflect'),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(32),
+            transforms.ToTensor(),
+            normalize,
+            Cutout(n_holes=1, length=16),
+        ])
+        '''
         dataset = datasets.CIFAR100(
             root=data_dir, train=True,
             download=self.download, transform=train_transform,
@@ -229,7 +259,11 @@ class CIFAR100(BaseDataloader):
             mean=[0.4914, 0.4822, 0.4465],
             std=[0.2023, 0.1994, 0.2010],
         )
-
+        '''
+        normalize = transforms.Normalize(
+            np.array([125.3, 123.0, 113.9]) / 255.0,
+            np.array([63.0, 62.1, 66.7]) / 255.0)
+        '''
         # define transform
         transform = transforms.Compose([
             transforms.ToTensor(),

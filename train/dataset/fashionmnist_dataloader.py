@@ -16,11 +16,11 @@ from train.dataset.dataloader import BaseDataloader
 from train.dataset.cutout import Cutout
 
 
-class MNIST(BaseDataloader):
+class FashionMNIST(BaseDataloader):
     def __init__(self):
-        super(MNIST, self).__init__()
-        self.root = os.path.expanduser('~/dataset/mnist/')
-        self.input_size = [28, 28, 1]
+        super(FashionMNIST, self).__init__()
+        self.root = os.path.expanduser('~/dataset/fashionmnist/')
+        self.input_size = [32, 32, 64]
         self.out_cls_num = 10
 
     def get_train_dataloader(self):
@@ -97,7 +97,6 @@ class MNIST(BaseDataloader):
         error_msg = "[!] valid_size should be in the range [0, 1]."
         assert ((valid_size >= 0) and (valid_size <= 1)), error_msg
 
-        # 设置这里, 需要注意类别, 有的是3类
         normalize = transforms.Normalize(
             mean=[0.5],
             std=[0.5],
@@ -105,6 +104,7 @@ class MNIST(BaseDataloader):
 
         # define transforms
         valid_transform = transforms.Compose([
+            transforms.Pad(2),
             transforms.ToTensor(),
             normalize,
         ])
@@ -118,10 +118,11 @@ class MNIST(BaseDataloader):
             ])
             '''
             train_transform = transforms.Compose([
-                transforms.RandomCrop(28, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
-          #      transforms.RandomHorizontalFlip(),  # 图像一半的概率翻转，一半的概率不翻转
+                transforms.RandomCrop(32, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
+                transforms.RandomHorizontalFlip(),  # 图像一半的概率翻转，一半的概率不翻转
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.5], std=[0.5]),  # R,G,B每层的归一化用到的均值和方差
+                Cutout(n_holes=1, length=16),
             ])
         else:
             train_transform = transforms.Compose([
@@ -130,12 +131,12 @@ class MNIST(BaseDataloader):
             ])
 
         # load the dataset
-        train_dataset = datasets.MNIST(
+        train_dataset = datasets.FashionMNIST(
             root=data_dir, train=True,
             download=self.download, transform=train_transform,
         )
 
-        valid_dataset = datasets.MNIST(
+        valid_dataset = datasets.FashionMNIST(
             root=data_dir, train=True,
             download=self.download, transform=valid_transform,
         )
@@ -144,7 +145,7 @@ class MNIST(BaseDataloader):
         indices = list(range(num_train))
         split = int(np.floor(valid_size * num_train))
 
-        #if shuffle:
+       # if shuffle:
             # np.random.seed(random_seed)
          #   np.random.shuffle(indices)
 
@@ -194,20 +195,20 @@ class MNIST(BaseDataloader):
         '''
         train_transform = transforms.Compose([
             transforms.RandomCrop(28, padding=4),
-            #transforms.RandomHorizontalFlip(),
+         #   transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
         ])
         '''
-
         train_transform = transforms.Compose([
-            transforms.RandomCrop(28, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
-         #   transforms.RandomHorizontalFlip(),  # 图像一半的概率翻转，一半的概率不翻转
+            transforms.RandomCrop(32, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
+            transforms.RandomHorizontalFlip(),  # 图像一半的概率翻转，一半的概率不翻转
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5], std=[0.5]),  # R,G,B每层的归一化用到的均值和方差
+            Cutout(n_holes=1, length=16),
         ])
 
-        dataset = datasets.MNIST(
+        dataset = datasets.FashionMNIST(
             root=data_dir, train=True,
             download=self.download, transform=train_transform,
         )
@@ -248,11 +249,12 @@ class MNIST(BaseDataloader):
 
         # define transform
         transform = transforms.Compose([
+            transforms.Pad(2),
             transforms.ToTensor(),
             normalize,
         ])
 
-        dataset = datasets.MNIST(
+        dataset = datasets.FashionMNIST(
             root=data_dir, train=False,
             download=self.download, transform=transform,
         )
@@ -263,64 +265,3 @@ class MNIST(BaseDataloader):
         )
 
         return data_loader
-
-
-
-if __name__ == '__main__':
-    dataset = 'MNIST'
-    root_path = os.path.expanduser('~/demo123/MO-ResNet/dataset/kmnist/')
-    ls_dataset = ['MNIST', 'KMNIST', 'CIFAR10', 'CIFAR100', 'FashionMNIST']
-    if dataset in ls_dataset:
-        from comm.registry import Registry
-        dataloader_cls = Registry.DataLoaderRegistry.query(dataset)
-        dataloader_cls_ins = dataloader_cls()
-    else:
-        from train.dataset.comm_data import FDataLoader
-        dataloader_cls_ins = FDataLoader()
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-    ])
-    trainData = datasets.KMNIST(root=root_path,
-                      train=True,
-                      transform=transform,
-                      download=True)
-    testData = datasets.KMNIST(root=root_path,
-                     train=False,
-                     transform=transform,
-                     download=True)
-
-    batch_size = 64
-    trainData_loader = tdata.DataLoader(dataset=trainData,
-                                  batch_size=batch_size,
-                                  shuffle=True)
-
-    testData_loader = tdata.DataLoader(dataset=testData,
-                                 batch_size=batch_size,
-                                 shuffle=True)
-
-    examples = enumerate(trainData_loader)
-    idx, (data, labels) = next(examples)
-
-    import matplotlib.pyplot as plt
-
-    for i in range(10):
-        wh = 0
-        while int(labels[wh]) != i:
-            wh+=1
-        plt.subplot(1, 10, i+1)
-        plt.imshow(data[wh].permute(1, 2, 0))
-        plt.xticks([])
-        plt.yticks([])
-
-    plt.savefig('KMNIST.pdf')
-    plt.show()
-'''
-    fig = plt.figure()
-    for i in range(4):
-        for j in range(4):
-            plt.subplot(4, 4, i * 4 + j + 1)
-            plt.imshow(data[i * 4 + j].permute(1,2,0))
-            plt.xticks([])
-            plt.yticks([])
-'''
-#

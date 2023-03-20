@@ -31,6 +31,7 @@ def init_db():
                                ssh_port              VARCHAR(250),
                                gpu_id                int(8),
                                status                int(8),
+                               task_num              int(8),
                                remark                text,
                                time                  VARCHAR(100));'''
 
@@ -83,6 +84,11 @@ def add_info(gpu_info, info):
     sql_gpu_list_del = 'delete from gpu_list where alg_name = \'%s\'' % (alg_name)
     Log.debug('Execute sql: %s' % (sql_gpu_list_del))
     cu.execute(sql_gpu_list_del)
+
+    sql_gpu_list_del2 = 'delete from gpu_arxiv_list where alg_name = \'%s\'' % (alg_name)
+    Log.debug('Execute sql: %s' % (sql_gpu_list_del2))
+    cu.execute(sql_gpu_list_del2)
+
     for each_one in info:
 
         worker = each_one['worker_ip']
@@ -92,23 +98,38 @@ def add_info(gpu_info, info):
         gpu_id = each_one['gpu_id']
         status = each_one['status']
         remark = each_one['remark']
+        """
+        task_cnt = 0, 2 can be used
+        task_cnt = 1, 1 can be
+        task_cnt = 2 cant
+        """
+        task_cnt = int(each_one['task_cnt'])
+
+        task_num = task_cnt
+
+        _per_max = 3
 
         if status == 0:
-            sql_gpu_list = 'INSERT INTO gpu_list(alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, remark, time) values (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %d, %d, \'%s\', \'%s\')' % (
-                alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, remark, time_str
-            )
-            Log.debug('Execute sql: %s' % (sql_gpu_list))
-            cu.execute(sql_gpu_list)
+            Log.info("GPU[{gpu_id}] runs task_num {task_cnt}, max {_per_max}"
+                     .format(gpu_id = gpu_id, task_cnt = task_cnt, _per_max = _per_max))
+    
+            for i in range(_per_max - task_cnt):
+                sql_gpu_list = 'INSERT INTO gpu_list(alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, task_num, remark, time) values (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %d, %d, %d, \'%s\', \'%s\')' % (
+                    alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, task_num, remark, time_str
+                )
+                Log.debug('Execute sql: %s' % (sql_gpu_list))
+                cu.execute(sql_gpu_list)
 
-        sql_gpu_archiv_list = 'INSERT INTO gpu_arxiv_list(alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, remark, time) values (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %d, %d, \'%s\', \'%s\')' % (
-            alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, remark, time_str
+        sql_gpu_archiv_list = 'INSERT INTO gpu_arxiv_list(alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, task_num, remark, time) values (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %d, %d, %d, \'%s\', \'%s\')' % (
+            alg_name, worker, ssh_name, ssh_password, ssh_port, gpu_id, status, task_num, remark, time_str
         )
+
         Log.debug('Execute sql: %s' % (sql_gpu_archiv_list))
         cu.execute(sql_gpu_archiv_list)
     conn.commit()
     conn.close()
 
-
+# 如果承载能力为2倍, 那么这个值可能为2倍
 def get_available_gpus():
     alg_config = AlgorithmConfig()
     alg_name = alg_config.read_ini_file('name')
@@ -122,8 +143,32 @@ def get_available_gpus():
     conn.close()
     return rs
 
+def get_all_gpus_infos_from_database():
+    alg_config = AlgorithmConfig()
+    alg_name = alg_config.read_ini_file('name')
+    # task_num: 关键字的num
+    sql = 'select id, worker as worker_ip, gpu_id, ssh_name, ssh_password, ssh_port, task_num from gpu_arxiv_list where alg_name=\'%s\'' % (
+        alg_name)
+    Log.debug('Execute sql: %s' % (sql))
+    conn = sqlite3.connect(get_db_path())
+    cu = conn.cursor()
+    cu.execute(sql)
+    rs = cu.fetchall()
+    conn.close()
+
+    return rs
 
 def confirmed_used_gpu(ids):
+    sql = 'delete from gpu_list where id in (%s)' % (','.join(ids))
+    Log.debug('Execute sql: %s' % (sql))
+    conn = sqlite3.connect(get_db_path())
+    cu = conn.cursor()
+    cu.execute(sql)
+    conn.commit()
+    conn.close()
+
+# 自己添加的新的
+def confirmed_used_gpu_task(ids):
     sql = 'delete from gpu_list where id in (%s)' % (','.join(ids))
     Log.debug('Execute sql: %s' % (sql))
     conn = sqlite3.connect(get_db_path())

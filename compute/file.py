@@ -33,6 +33,10 @@ def get_python_exec():
     python_exec = python_config.read_ini_file('exe_path')
     return python_exec
 
+def get_python_keyword():
+    python_config = ExecuteConfig()
+    exe_keyword = python_config.read_ini_file('exe_keyword')
+    return exe_keyword
 
 def get_gen_number():
     '''
@@ -80,7 +84,7 @@ def get_top_dest_dir():
     :return:获取算法在服务器根路径下的路径
     '''
     algo_name = get_algo_name()
-    tdd = os.path.join('~', algo_name)
+    tdd = os.path.join('~', "onebinary/enas_runtime/", algo_name)
     return tdd
 
 
@@ -186,7 +190,7 @@ def makedirs(ssh_name, ssh_password, ip, dir_path, port = 22):
 
 def exec_python(ssh_name, ssh_password, ip, worker_name, py_file, args, python_exec=get_python_exec(), port = 22):
     top_dir = get_top_dest_dir()
-    py_file = os.path.join(top_dir, py_file).replace('~', '/home/' + ssh_name)
+    py_file = os.path.join(top_dir, py_file).replace('~',  '/home/' + ssh_name if ssh_name != "root" else "/root")
     Log.info('Execute the remote python file [(%s:%s)%s]' % (ip, str(port), py_file))
     _exec_cmd = 'sshpass -p \'%s\' ssh %s@%s -p \'%s\' %s  \'%s\' %s' % (
         ssh_password, ssh_name, ip, str(port), python_exec, py_file,
@@ -252,7 +256,7 @@ def transfer_training_files(ssh_name, ssh_password, worker_ip, port = 22):
     top_dir = get_top_dest_dir()
     for src, dst in training_file_dep:
         full_path_source = os.path.join(get_local_path(), src)
-        full_path_dest = os.path.join(top_dir, dst).replace('~', '/home/' + ssh_name)
+        full_path_dest = os.path.join(top_dir, dst).replace('~',  '/home/' + ssh_name if ssh_name != "root" else "/root")
 
         if full_path_dest.endswith('training.py'):
             full_path_dest = os.path.join(os.path.dirname(os.path.dirname(full_path_dest)), 'training.py')

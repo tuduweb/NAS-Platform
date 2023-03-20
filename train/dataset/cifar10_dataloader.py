@@ -13,12 +13,13 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import torch.utils.data as tdata
 
 from train.dataset.dataloader import BaseDataloader
+from train.dataset.cutout import Cutout
 
 class CIFAR10(BaseDataloader):
     def __init__(self):
         super(CIFAR10, self).__init__()
         self.root = os.path.expanduser('~/dataset/cifar10/')
-        self.input_size = [32, 32, 3]
+        self.input_size = [32, 32, 64]
         self.out_cls_num = 10
 
     def get_train_dataloader(self):
@@ -110,11 +111,20 @@ class CIFAR10(BaseDataloader):
                 normalize,
         ])
         if augment:
+            '''
             train_transform = transforms.Compose([
                 transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 normalize,
+            ])
+            '''
+            train_transform = transforms.Compose([
+                transforms.RandomCrop(32, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
+                transforms.RandomHorizontalFlip(),  # 图像一半的概率翻转，一半的概率不翻转
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # R,G,B每层的归一化用到的均值和方差
+                Cutout(n_holes=1, length=16),
             ])
         else:
             train_transform = transforms.Compose([
@@ -184,12 +194,22 @@ class CIFAR10(BaseDataloader):
         )
 
         # define transform
+        '''
         train_transform = transforms.Compose([
                 transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 normalize,
             ])
+        '''
+
+        train_transform = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
+            transforms.RandomHorizontalFlip(),  # 图像一半的概率翻转，一半的概率不翻转
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),  # R,G,B每层的归一化用到的均值和方差
+            Cutout(n_holes=1, length=16),
+        ])
 
         dataset = datasets.CIFAR10(
             root=data_dir, train=True,

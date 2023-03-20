@@ -55,7 +55,7 @@ class TrainConfig(object):
         d = DatasetConfig()
         o = OptimizerConfig()
         l = LRConfig()
-        ls_dataset = ['MNIST', 'CIFAR10', 'CIFAR100']
+        ls_dataset = ['MNIST', 'KMNIST', 'CIFAR10', 'CIFAR100', 'FashionMNIST']
         """Configurate the training model 
         """
         # load the dataset
@@ -73,6 +73,7 @@ class TrainConfig(object):
 
         trainModel.batch_size = int(o.read_ini_file('_batch_size'))
         trainModel.nepochs = int(o.read_ini_file('_total_epoch'))
+        trainModel.fullepochs = int(o.read_ini_file('_full_epoch'))
         trainModel.lr = float(l.read_ini_file('lr'))
 
         trainModel.trainloader = train_loader
@@ -82,7 +83,7 @@ class TrainConfig(object):
     @staticmethod
     def get_out_cls_num():
         d = DatasetConfig()
-        ls_dataset = ['MNIST', 'CIFAR10', 'CIFAR100']
+        ls_dataset = ['MNIST', 'KMNIST', 'CIFAR10', 'CIFAR100', 'FashionMNIST']
         dataset = d.read_ini_file('_name')
         if dataset in ls_dataset:
             from comm.registry import Registry
@@ -96,7 +97,7 @@ class TrainConfig(object):
     @staticmethod
     def get_data_input_size():
         d = DatasetConfig()
-        ls_dataset = ['MNIST', 'CIFAR10', 'CIFAR100']
+        ls_dataset = ['MNIST', 'KMNIST', 'CIFAR10', 'CIFAR100', 'FashionMNIST']
         dataset = d.read_ini_file('_name')
         if dataset in ls_dataset:
             from comm.registry import Registry

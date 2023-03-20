@@ -1,6 +1,6 @@
 """
 Create train, valid, main iterators for CIFAR-10 [1].
-Easily extended to MNIST, CIFAR-100 and Imagenet.
+Easily extended to KMNIST, CIFAR-100 and Imagenet.
 [1]: https://discuss.pytorch.org/t/feedback-on-pytorch-for-kaggle-competitions/2252/4
 """
 
@@ -16,10 +16,10 @@ from train.dataset.dataloader import BaseDataloader
 from train.dataset.cutout import Cutout
 
 
-class MNIST(BaseDataloader):
+class KMNIST(BaseDataloader):
     def __init__(self):
-        super(MNIST, self).__init__()
-        self.root = os.path.expanduser('~/dataset/mnist/')
+        super(KMNIST, self).__init__()
+        self.root = os.path.expanduser('~/demo123/MO-ResNet/dataset/kmnist/')
         self.input_size = [28, 28, 1]
         self.out_cls_num = 10
 
@@ -72,7 +72,7 @@ class MNIST(BaseDataloader):
                                  pin_memory=False):
         """
         Utility function for loading and returning train and valid
-        multi-process iterators over the MNIST dataset. A sample
+        multi-process iterators over the KMNIST dataset. A sample
         9x9 grid of the images can be optionally displayed.
         If using CUDA, num_workers should be set to 1 and pin_memory to True.
         Params
@@ -97,7 +97,6 @@ class MNIST(BaseDataloader):
         error_msg = "[!] valid_size should be in the range [0, 1]."
         assert ((valid_size >= 0) and (valid_size <= 1)), error_msg
 
-        # 设置这里, 需要注意类别, 有的是3类
         normalize = transforms.Normalize(
             mean=[0.5],
             std=[0.5],
@@ -130,12 +129,12 @@ class MNIST(BaseDataloader):
             ])
 
         # load the dataset
-        train_dataset = datasets.MNIST(
+        train_dataset = datasets.KMNIST(
             root=data_dir, train=True,
             download=self.download, transform=train_transform,
         )
 
-        valid_dataset = datasets.MNIST(
+        valid_dataset = datasets.KMNIST(
             root=data_dir, train=True,
             download=self.download, transform=valid_transform,
         )
@@ -171,7 +170,7 @@ class MNIST(BaseDataloader):
                            pin_memory=False):
         """
         Utility function for loading and returning a multi-process
-        main iterator over the MNIST dataset.
+        main iterator over the KMNIST dataset.
         If using CUDA, num_workers should be set to 1 and pin_memory to True.
         Params
         ------
@@ -207,7 +206,7 @@ class MNIST(BaseDataloader):
             transforms.Normalize(mean=[0.5], std=[0.5]),  # R,G,B每层的归一化用到的均值和方差
         ])
 
-        dataset = datasets.MNIST(
+        dataset = datasets.KMNIST(
             root=data_dir, train=True,
             download=self.download, transform=train_transform,
         )
@@ -227,7 +226,7 @@ class MNIST(BaseDataloader):
                           pin_memory=False):
         """
         Utility function for loading and returning a multi-process
-        main iterator over the MNIST dataset.
+        main iterator over the KMNIST dataset.
         If using CUDA, num_workers should be set to 1 and pin_memory to True.
         ParamsZ
         ------
@@ -252,7 +251,7 @@ class MNIST(BaseDataloader):
             normalize,
         ])
 
-        dataset = datasets.MNIST(
+        dataset = datasets.KMNIST(
             root=data_dir, train=False,
             download=self.download, transform=transform,
         )
@@ -269,7 +268,7 @@ class MNIST(BaseDataloader):
 if __name__ == '__main__':
     dataset = 'MNIST'
     root_path = os.path.expanduser('~/demo123/MO-ResNet/dataset/kmnist/')
-    ls_dataset = ['MNIST', 'KMNIST', 'CIFAR10', 'CIFAR100', 'FashionMNIST']
+    ls_dataset = ['MNIST', 'CIFAR10', 'CIFAR100', 'FashionMNIST']
     if dataset in ls_dataset:
         from comm.registry import Registry
         dataloader_cls = Registry.DataLoaderRegistry.query(dataset)
@@ -280,11 +279,11 @@ if __name__ == '__main__':
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
-    trainData = datasets.KMNIST(root=root_path,
+    trainData = datasets.CIFAR100(root=root_path,
                       train=True,
                       transform=transform,
                       download=True)
-    testData = datasets.KMNIST(root=root_path,
+    testData = datasets.CIFAR100(root=root_path,
                      train=False,
                      transform=transform,
                      download=True)
@@ -303,18 +302,6 @@ if __name__ == '__main__':
 
     import matplotlib.pyplot as plt
 
-    for i in range(10):
-        wh = 0
-        while int(labels[wh]) != i:
-            wh+=1
-        plt.subplot(1, 10, i+1)
-        plt.imshow(data[wh].permute(1, 2, 0))
-        plt.xticks([])
-        plt.yticks([])
-
-    plt.savefig('KMNIST.pdf')
-    plt.show()
-'''
     fig = plt.figure()
     for i in range(4):
         for j in range(4):
@@ -322,5 +309,7 @@ if __name__ == '__main__':
             plt.imshow(data[i * 4 + j].permute(1,2,0))
             plt.xticks([])
             plt.yticks([])
-'''
+    plt.savefig('figure4_4.png')
+    plt.show()
+
 #

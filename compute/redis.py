@@ -100,7 +100,7 @@ class RedisLog(object):
                     else:
                         assert 0
 
-                time.sleep(1)
+                time.sleep(0.01)
 
         proc=multiprocess.Process(target=proc_func)
         proc.start()

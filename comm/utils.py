@@ -29,17 +29,33 @@ class GPUFitness():
         for line in f:
             if len(line.strip()) > 0:
                 line = line.strip().split('=')
-                fitness_map[line[0]] = float(line[1])
+
+                datas = line[1].strip().split(',')
+
+                fitness_map[line[0]] = []
+
+                # for i in len(datas):
+                #     datas[i]
+                #     fitness_map[line[0]].append(float(datas[i]))
+
+                fitness_map[line[0]].append(float(datas[0]))
+                fitness_map[line[0]].append(float(datas[1]))
+
         f.close()
         return fitness_map
 
 
 class CacheToResultFile():
     @classmethod
-    def do(cls, file_id, best_acc):
+    def do(cls, file_id, best_error, best_loss, num_para = 99999999999):
         logger = RedisLog(os.path.basename(file_id) + '.txt')
-        logger.write_file('RESULTS', 'results.txt', '%s=%.5f\n' % (file_id, best_acc))
+        logger.write_file('RESULTS', 'results.txt', '%s=%.5f,%.5f,%d\n' % (file_id, best_error, best_loss, num_para))
 
+# class CacheToResultFile():
+#     @classmethod
+#     def do(cls, file_id, best_error):
+#         logger = RedisLog(os.path.basename(file_id) + '.txt')
+#         logger.write_file('RESULTS', 'results.txt', '%s=%.5f\n' % (file_id, best_error))
 
 if __name__ == '__main__':
     GPUFitness.read()

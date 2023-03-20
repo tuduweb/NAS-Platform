@@ -8,9 +8,11 @@ def read_result(alg_name):
     with open(result_path, 'r') as f:
         line = f.readline().strip()
         while line:
-            acc = line.split('=')[1]
-            if float(acc) > best_acc:
-                best_acc = float(acc)
+            datas = line.split('=')[1]
+            acc_error = float(datas[1].split(',')[0])
+            acc = 1.0 - acc_error
+            if acc > best_acc:
+                best_acc = acc
             line = f.readline().strip()
         f.close()
     return best_acc
