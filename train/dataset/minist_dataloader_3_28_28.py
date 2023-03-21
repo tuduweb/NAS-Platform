@@ -15,9 +15,9 @@ import torch.utils.data as tdata
 from train.dataset.dataloader import BaseDataloader
 
 
-class MNIST(BaseDataloader):
+class MNIST_3_28_28(BaseDataloader):
     def __init__(self):
-        super(MNIST, self).__init__()
+        super(MNIST_3_28_28, self).__init__()
         self.root = os.path.expanduser('~/dataset/mnist/')
         self.input_size = [28, 28, 1]
         self.out_cls_num = 10
