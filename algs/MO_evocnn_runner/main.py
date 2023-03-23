@@ -20,21 +20,83 @@ class EvolveCNN(object):
         self.params = params
         self.pops = None
         self.pop_size = params['pop_size']
-        self.M = 2  #the number of targets is 2
-        self.lamda = np.zeros((self.pop_size, self.M))
-        for i in range(self.pop_size):
-            self.lamda[i][0] = i / self.pop_size
-            self.lamda[i][1] = (self.pop_size - i) / self.pop_size
+        self.M = 3  #the number of targets is 2
+        # self.lamda = np.zeros((self.pop_size, self.M))
+
+        __k = self.pop_size // 2
+        _vector = []
+        for i in range(0, __k):
+            for j in range(0, __k):
+                for k in range(0, __k):
+                    if i + j + k == __k:
+                        _vector.append([i, j, k])
+
+        _vector_size = len(_vector)
+
+        # for i in range(self.pop_size):
+        #     self.lamda[i][0] = i / self.pop_size
+        #     self.lamda[i][1] = (self.pop_size - i) / self.pop_size
+
+        # 生成权重向量
+        self.lamda = np.zeros((_vector_size, self.M))
+
+        for idx, values in enumerate(_vector):
+            i, k, j = values
+            self.lamda[idx][0] = i / __k
+            self.lamda[idx][1] = k / __k
+            self.lamda[idx][2] = j / __k
+        
+        # 每一个权重向量的邻居
         self.T = int(self.pop_size / 5)
-        self.B = np.zeros((self.pop_size, self.pop_size))
+        # 每两个权重向量之间的欧几里得距离
+        self.B = np.zeros((_vector_size, _vector_size))
         self.EP = []
-        for i in range(self.pop_size):
-            for j in range(self.pop_size):
-                self.B[i][j] = np.linalg.norm(self.lamda[i, :] - self.lamda[j, :]);
+        for i in range(_vector_size):
+            x1, y1, z1 = _vector[i]
+            for j in range(_vector_size):
+                x2, y2, z2 = _vector[j]
+                self.B[i][j] = np.linalg.norm(self.lamda[i, :] - self.lamda[j, :])
+                # self.B[i][j] = np.linalg.norm(self.lamda[i, :] - self.lamda[j, :]);
             self.B[i, :] = np.argsort(self.B[i, :])
+
+        # for i in range(_vector_size):
+        #     for j in range(_vector_size):
+        #         self.B[i][j] = np.linalg.norm(self.lamda[i, :] - self.lamda[j, :]);
+        #     self.B[i, :] = np.argsort(self.B[i, :])
+
+        n_obj = self.M #weights.shape[1]  # 目标数
+        n_pop = self.pop_size #population.shape[0]  # 种群大小
+        n_weight = _vector_size #weights.shape[0]  # 权重向量数
+
+        # 计算每个个体与所有权重向量之间的距离
+        distances = np.zeros((n_pop, n_weight))
+        for i in range(n_weight):
+            distances[:, i] = np.sqrt(np.sum((population - weights[i])**2, axis=1))
+
+        # 选择与每个权重向量最接近的个体
+        closest = np.argmin(distances, axis=0)
+
+        # 对选定的个体进行聚合
+        aggregated_pop = np.zeros((n_weight, n_obj))
+        for i in range(n_weight):
+            members = np.where(closest == i)[0]  # 选择所有被选为第i个权重向量代表的个体
+            if len(members) == 1:
+                aggregated_pop[i] = population[members[0]]
+            else:
+                weights_i = weights[i]
+                sum_weights = np.sum(1 / distances[members, i])
+                for j in range(n_obj):
+                    aggregated_pop[i, j] = np.sum((population[members, j] / distances[members, i]) * (1 / sum_weights))
+
+        #return aggregated_pop
+
+
+
+
         self.z = np.zeros(self.M)
         for i in range(self.M):
             self.z[i] = 100
+        self.z[self.M - 1] = 1000000
 
     def dominate(self, x, y):
         lte = 0
@@ -76,7 +138,7 @@ class EvolveCNN(object):
     def modify_EP(self, indi):
         flag = 1
         j = 0
-        candidate = [indi.error_mean, indi.loss_mean]
+        candidate = [indi.error_mean, indi.loss_mean, indi.timecost]
         while j < len(self.EP):
             if j >= len(self.EP):
                 break
@@ -109,20 +171,22 @@ class EvolveCNN(object):
         _runnerResourcePath = os.path.realpath(os.path.join(runtime_dir, "runner"))
         _summaryResultPath = os.path.realpath(os.path.join(runtime_dir, "summary"))
 
-        if not os.path.exists(_runnerResourcePath):
-            os.makedirs(_runnerResourcePath)
-        if not os.path.exists(_summaryResultPath):
-            os.makedirs(_summaryResultPath)
-
         _summaryResultSavedUri = os.path.realpath(os.path.join(_summaryResultPath, "summary-gen-%05d.txt" % self.pops.gen_no))
         _runnerLogSavedUri = os.path.realpath(os.path.join(_runnerResourcePath, "runner-%05d.txt" % self.pops.gen_no))
+
+        _runnerMapSavedUri = os.path.realpath(os.path.join(_runnerResourcePath, "map-%05d.txt" % self.pops.gen_no))
+
 
         """
         构造indi.id -> indi.uuid()[0] 对应表
         """
         indi_map = {}
+        _str = []
         for indi in self.pops.individuals:
             indi_map[indi.id] = indi.uuid()[0]
+            _str.append("%s=%s" % (indi.id, indi.uuid()[0]))
+
+        Utils.write_to_file('\n'.join(_str), _runnerMapSavedUri)
 
         for key, value in indi_map.items():
             print(key, value)
@@ -133,34 +197,42 @@ class EvolveCNN(object):
             try load from cache
             """
             cache_file_name = '%s/cache.txt' % (os.path.join(get_algo_local_dir(), 'runner'))
+            
+            # 尝试从以往已经运行的文件中读取..
+            #if os.path.exists(_runnerLogSavedUri):
+
             """
             需要判断是否有该轮次的Runner缓存..
             如果没有的话就需要将该轮+需要比较的indi一起跑一次时间benchmark测试
             indi.uuid() = xxx.ncnn.param
             """
+            _hash = "123456789helloworld"
+            skipCheckHash = False
 
             _startTime = time.time()
-            _hash = "h%d" % int(time.time())
-            _runner_py = "~/onebinary/ML-NAS/experiment/nas-evocnn-autodeploy/runner-x1e.py"
-            _exec_cmd = "/usr/bin/python3 " + _runner_py + " --source=path --sourcepath=%s --hash=%s --gen=%d --saveuri=%s" % (_sourcepath, _hash, self.pops.gen_no, _runnerLogSavedUri)
-            #_stdout, _stderr = exec_cmd_remote(_exec_cmd, need_response=False)
-            Log.info("%s" % _exec_cmd)
+            if not os.path.exists(_runnerLogSavedUri):
+                _hash = "h%d" % int(time.time())
+                _runner_py = "~/onebinary/ML-NAS/experiment/nas-evocnn-autodeploy/runner.py"
+                _exec_cmd = "/usr/bin/python3 " + _runner_py + " --source=path --sourcepath=%s --machine=pi --hash=%s --gen=%d --saveuri=%s --mapuri=%s" % (_sourcepath, _hash, self.pops.gen_no, _runnerLogSavedUri, _runnerMapSavedUri)
+                #_stdout, _stderr = exec_cmd_remote(_exec_cmd, need_response=False)
+                Log.info("%s" % _exec_cmd)
 
-            ret = os.system(_exec_cmd)
+                ret = os.system(_exec_cmd)
 
+                _waitCnt = 0
+                fileExist = False
 
+                while not os.path.exists(_runnerLogSavedUri):
+                    Log.info("wait for runner log, cnt %d" % _waitCnt)
+                    time.sleep(5)
+                    _waitCnt += 1
 
-            _waitCnt = 0
-            fileExist = False
+                    if _waitCnt > 100:
+                        Log.info("error : wait for runner log, cnt %d" % _waitCnt)
 
-            while not os.path.exists(_runnerLogSavedUri):
-                Log.info("wait for runner log, cnt %d" % _waitCnt)
-                time.sleep(5)
-                _waitCnt += 1
-
-                if _waitCnt > 100:
-                    Log.info("error : wait for runner log, cnt %d" % _waitCnt)
-
+            else:
+                # 有缓存, 临时skip的情况
+                skipCheckHash = True
 
             _okFlag = False
 
@@ -170,7 +242,7 @@ class EvolveCNN(object):
                 f.close()
                 for line in lines:
                     if len(line.strip()) > 0:
-                        if _hash in line:
+                        if (skipCheckHash and "=" in line) or _hash in line:
                             line = line.strip().split('=')
                             datas = eval(line[1].strip())
 
@@ -178,16 +250,17 @@ class EvolveCNN(object):
                                 if indi.id in datas.keys():
                                     indi.timecost = datas[indi.id]
                                 else:
-                                    indi.timecost = 999999.0 + 1.0
+                                    indi.timecost = 999999.0 # + 1.0
 
                             _okFlag = True
                             break
 
-                Log.info("runner gen %d: wait %fms" % (self.pops.gen_no, (time.time() - _startTime) * 1000))
-                time.sleep(5)
+                if not skipCheckHash:
+                    Log.info("runner gen %d: wait %fs" % (self.pops.gen_no, (time.time() - _startTime) * 1))
+                    time.sleep(5)
 
             _endTime = time.time()
-            Log.info("runner gen %d: timecost %fms" % (self.pops.gen_no, (_endTime - _startTime) * 1000))
+            Log.info("runner gen %d: timecost %fs" % (self.pops.gen_no, (_endTime - _startTime) * 1))
 
             """
             理论上 在这里已经:
@@ -220,7 +293,11 @@ class EvolveCNN(object):
         for indi in self.pops.individuals:
             _retryCnt = 0
             brkFlag = False
-            if indi.error_mean == -1:
+            if indi.error_mean == -1: #modify_timecost version
+                if indi.timecost >= 1000:
+                    Log.info("%s time cost[%.5f] too much, skip." % (indi.id, indi.timecost))
+                    continue
+        
                 while indi.id not in fitness_map.keys():
                     Log.info('Fitness evaludate cant found: indi.id[%s] not in fitness_map(size = %d), sleep and retry %d' % (indi.id, len(fitness_map), _retryCnt))
                     time.sleep(10)
@@ -268,7 +345,9 @@ class EvolveCNN(object):
             df.loc[idx] = item.values()
 
         df.sort_values("name", inplace=True, ascending=True)
+        # save to
         df.to_csv(_summaryResultSavedUri, index=False)
+        
         Log.info('Summary gen [%d] to %s' % (self.pops.gen_no, _summaryResultSavedUri))
 
 
@@ -281,6 +360,8 @@ class EvolveCNN(object):
                     self.z[0] = indi.error_mean
                 if self.z[1] > indi.loss_mean:
                     self.z[1] = indi.loss_mean
+                if self.z[2] > indi.timecost:
+                    self.z[2] = indi.timecost
                 if -1 == self.modify_EP(indi):
                     Log.info('%s has duplicate' % (indi.id))
         Utils.save_EP_after_evaluation(str(self.EP), self.pops.gen_no)
@@ -307,12 +388,12 @@ class EvolveCNN(object):
         for indi in self.pops.individuals:
             indi_list.append(indi)
             v_list.append(indi.error_mean)
-            _t_str = 'Indi-%s-%.5f-%.5f-%s' % (indi.id, indi.error_mean, indi.loss_mean, indi.uuid()[0])
+            _t_str = 'Indi-%s-%.5f-%.5f-%.5f-%s' % (indi.id, indi.error_mean, indi.loss_mean, indi.timecost, indi.uuid()[0])
             _str.append(_t_str)
         for indi in self.pops.offsprings:
             indi_list.append(indi)
             v_list.append(indi.error_mean)
-            _t_str = 'Offs-%s-%.5f-%.5f-%s' % (indi.id, indi.error_mean, indi.loss_mean, indi.uuid()[0])
+            _t_str = 'Offs-%s-%.5f-%.5f-%.5f-%s' % (indi.id, indi.error_mean, indi.loss_mean, indi.timecost, indi.uuid()[0])
             _str.append(_t_str)
 
         i = 0
@@ -321,8 +402,8 @@ class EvolveCNN(object):
             for j in range(self.T):
                 p = int(self.B[i, j])
                 o = copy.deepcopy(self.pops.individuals[p])
-                value_fj = self.gte([indi.error_mean, indi.loss_mean], self.lamda[p, :], self.z)
-                value_p = self.gte([o.error_mean, o.loss_mean], self.lamda[p, :], self.z)
+                value_fj = self.gte([indi.error_mean, indi.loss_mean, indi.timecost], self.lamda[p, :], self.z)
+                value_p = self.gte([o.error_mean, o.loss_mean, indi.timecost], self.lamda[p, :], self.z)
                 if value_fj < value_p:
                     self.pops.individuals[p] = copy.deepcopy(indi)
             i += 1
@@ -335,24 +416,53 @@ class EvolveCNN(object):
         next_gen_pops.create_from_offspring(self.pops.individuals)
         self.pops = next_gen_pops
         for _, indi in enumerate(self.pops.individuals):
-            _t_str = 'new -%s-%.5f-%.5f-%s' % (indi.id, indi.error_mean, indi.loss_mean, indi.uuid()[0])
+            _t_str = 'new -%s-%.5f-%.5f-%.5f-%s' % (indi.id, indi.error_mean, indi.loss_mean, indi.timecost, indi.uuid()[0])
             _str.append(_t_str)
         _file = '%s/ENVI_%05d.txt' % (os.path.join(get_algo_local_dir(), 'populations'), self.pops.gen_no - 1)
         Utils.write_to_file('\n'.join(_str), _file)
 
         Utils.save_population_at_begin(str(self.pops), self.pops.gen_no)
 
-    def create_necessary_folders(self):
-        sub_folders = [os.path.join(get_algo_local_dir(), v) for v in ['populations', 'log', 'scripts']]
+    def create_necessary_folders_and_init(self):
+        sub_folders = [os.path.join(get_algo_local_dir(), v) for v in ['populations', 'log', 'scripts', 'runner', 'summary']]
         if not os.path.exists(get_algo_local_dir()):
             os.mkdir(get_algo_local_dir())
         for each_sub_folder in sub_folders:
             if not os.path.exists(each_sub_folder):
                 os.mkdir(each_sub_folder)
+        
+        # 将配置项整合到一个文件里
+        #from compute import config
+
+        #get_global_ini_path()
+        #get_train_ini_path()
+        from comm.utils import PlatENASConfig
+        g = PlatENASConfig('algorithm')
+        algs_name = g.read_ini_file('run_algorithm')
+
+        # global.ini, compute/gpu.ini, algs/xx/genetic/global.ini, train/train.ini
+        configFiles = ['global.ini', 'compute/gpu.ini', 'train/train.ini', os.path.join('algs', algs_name, 'genetic/global.ini')]
+        # configFiles = [os.path.realpath(os.path.join(os.path.dirname(os.path.dirname(__file__)), uri)) for uri in configFilesUri]
+
+        config_lines = []
+        for _file in configFiles:
+            fileUri = os.path.realpath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), _file))
+            # 额外增加注释项
+            with open(fileUri, 'r') as f:
+                filelines = f.readlines()
+                f.close()
+                config_lines.append("; [%s] path: %s" % (_file, fileUri))
+                config_lines.extend(filelines)
+
+
+        Utils.write_to_file("".join(config_lines), os.path.join(get_algo_local_dir(), "merge_config.ini"))
+
+        # db_ip = g.read_ini_file('log_server')
+        # db_port = int(g.read_ini_file('pop_size'))
 
     def do_work(self, max_gen):
         # create the corresponding fold under runtime
-        self.create_necessary_folders()
+        self.create_necessary_folders_and_init()
 
         # the step 1
         if StatusUpdateTool.is_evolution_running():
@@ -363,7 +473,7 @@ class EvolveCNN(object):
                 pops = Utils.load_population('begin', gen_no)
                 self.pops = pops
                 if gen_no > 0:
-                    EP = Utils.load_EP('EP', gen_no-1)
+                    EP = Utils.load_EP('EP', gen_no - 1)
                     self.EP = EP
             else:
                 raise ValueError('The running flag is set to be running, but there is no generated population stored')
