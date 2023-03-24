@@ -20,41 +20,41 @@ class EvolveCNN(object):
         self.params = params
         self.pops = None
         self.pop_size = params['pop_size']
-        self.M = 3  #the number of targets is 2
-        # self.lamda = np.zeros((self.pop_size, self.M))
+        self.M = 2  #the number of targets is 2
+        self.lamda = np.zeros((self.pop_size, self.M))
 
-        __k = self.pop_size // 2
-        _vector = []
-        for i in range(0, __k):
-            for j in range(0, __k):
-                for k in range(0, __k):
-                    if i + j + k == __k:
-                        _vector.append([i, j, k])
+        # __k = self.pop_size // 2 # 子问题数量, 通常与pop_size相同
+        # _vector = []
+        # for i in range(0, __k):
+        #     for j in range(0, __k):
+        #         for k in range(0, __k):
+        #             if i + j + k == __k:
+        #                 _vector.append([i, j, k])
 
-        _vector_size = len(_vector)
+        # _vector_size = len(_vector)
 
-        # for i in range(self.pop_size):
-        #     self.lamda[i][0] = i / self.pop_size
-        #     self.lamda[i][1] = (self.pop_size - i) / self.pop_size
+        for i in range(self.pop_size):
+            self.lamda[i][0] = i / self.pop_size
+            self.lamda[i][1] = (self.pop_size - i) / self.pop_size
 
-        # 生成权重向量
-        self.lamda = np.zeros((_vector_size, self.M))
+        # # 生成权重向量, 权重向量的数目需要和个体数目对应起来.. 不然后面会报错
+        # self.lamda = np.zeros((_vector_size, self.M))
 
-        for idx, values in enumerate(_vector):
-            i, k, j = values
-            self.lamda[idx][0] = i / __k
-            self.lamda[idx][1] = k / __k
-            self.lamda[idx][2] = j / __k
+        # for idx, values in enumerate(_vector):
+        #     i, k, j = values
+        #     self.lamda[idx][0] = i / __k
+        #     self.lamda[idx][1] = k / __k
+        #     self.lamda[idx][2] = j / __k
         
-        # 每一个权重向量的邻居
+        # 每一个权重向量的邻居 通常取 $\sqrt{N}$ 或 $N/10$。?
         self.T = int(self.pop_size / 5)
         # 每两个权重向量之间的欧几里得距离
-        self.B = np.zeros((_vector_size, _vector_size))
+        self.B = np.zeros((self.pop_size, self.pop_size))
         self.EP = []
-        for i in range(_vector_size):
-            x1, y1, z1 = _vector[i]
-            for j in range(_vector_size):
-                x2, y2, z2 = _vector[j]
+        for i in range(self.pop_size):
+            #x1, y1, z1 = _vector[i]
+            for j in range(self.pop_size):
+                #x2, y2, z2 = _vector[j]
                 self.B[i][j] = np.linalg.norm(self.lamda[i, :] - self.lamda[j, :])
                 # self.B[i][j] = np.linalg.norm(self.lamda[i, :] - self.lamda[j, :]);
             self.B[i, :] = np.argsort(self.B[i, :])
@@ -63,34 +63,6 @@ class EvolveCNN(object):
         #     for j in range(_vector_size):
         #         self.B[i][j] = np.linalg.norm(self.lamda[i, :] - self.lamda[j, :]);
         #     self.B[i, :] = np.argsort(self.B[i, :])
-
-        n_obj = self.M #weights.shape[1]  # 目标数
-        n_pop = self.pop_size #population.shape[0]  # 种群大小
-        n_weight = _vector_size #weights.shape[0]  # 权重向量数
-
-        # 计算每个个体与所有权重向量之间的距离
-        distances = np.zeros((n_pop, n_weight))
-        for i in range(n_weight):
-            distances[:, i] = np.sqrt(np.sum((population - weights[i])**2, axis=1))
-
-        # 选择与每个权重向量最接近的个体
-        closest = np.argmin(distances, axis=0)
-
-        # 对选定的个体进行聚合
-        aggregated_pop = np.zeros((n_weight, n_obj))
-        for i in range(n_weight):
-            members = np.where(closest == i)[0]  # 选择所有被选为第i个权重向量代表的个体
-            if len(members) == 1:
-                aggregated_pop[i] = population[members[0]]
-            else:
-                weights_i = weights[i]
-                sum_weights = np.sum(1 / distances[members, i])
-                for j in range(n_obj):
-                    aggregated_pop[i, j] = np.sum((population[members, j] / distances[members, i]) * (1 / sum_weights))
-
-        #return aggregated_pop
-
-
 
 
         self.z = np.zeros(self.M)
@@ -138,7 +110,7 @@ class EvolveCNN(object):
     def modify_EP(self, indi):
         flag = 1
         j = 0
-        candidate = [indi.error_mean, indi.loss_mean, indi.timecost]
+        candidate = [indi.error_mean, indi.timecost]
         while j < len(self.EP):
             if j >= len(self.EP):
                 break
@@ -358,10 +330,10 @@ class EvolveCNN(object):
             if indi.error_mean != -1:
                 if self.z[0] > indi.error_mean:
                     self.z[0] = indi.error_mean
-                if self.z[1] > indi.loss_mean:
-                    self.z[1] = indi.loss_mean
-                if self.z[2] > indi.timecost:
-                    self.z[2] = indi.timecost
+                # if self.z[1] > indi.loss_mean:
+                #     self.z[1] = indi.loss_mean
+                if self.z[1] > indi.timecost:
+                    self.z[1] = indi.timecost
                 if -1 == self.modify_EP(indi):
                     Log.info('%s has duplicate' % (indi.id))
         Utils.save_EP_after_evaluation(str(self.EP), self.pops.gen_no)
@@ -385,6 +357,11 @@ class EvolveCNN(object):
         v_list = []
         indi_list = []
         _str = []
+        # 在一次完整的..里, 由生成begin, 和交叉变异后子代构成
+        """
+        self.pops.offsprings = copy.deepcopy(self.pops.individuals) # 刚刚训练出炉的一带
+        self.pops.individuals = copy.deepcopy(self.pops.parent_individuals) # 上一代
+        """
         for indi in self.pops.individuals:
             indi_list.append(indi)
             v_list.append(indi.error_mean)
@@ -396,16 +373,54 @@ class EvolveCNN(object):
             _t_str = 'Offs-%s-%.5f-%.5f-%.5f-%s' % (indi.id, indi.error_mean, indi.loss_mean, indi.timecost, indi.uuid()[0])
             _str.append(_t_str)
 
+        """
+        在 MOEA/D 中，通过将权重向量分配给每个个体，可以将多目标优化问题转化为单目标优化问题。
+        具体地，对于每个个体，使用其对应的权重向量计算出其在目标空间中的投影值（也称为加权向量），
+        然后将其与邻居个体的加权向量进行比较，选择其中最优的一个作为该个体的邻居。
+
+
+        在MOEA/D算法中，选择邻居向量的过程被称为"neighboring selection"，
+        其基本思想是从预定义的权重向量集合中选择一些与当前个体比较接近的权重向量，
+        然后在这些权重向量对应的子问题上，选择一些比较优秀的邻居进行交叉和变异操作，得到新的解并更新当前个体的状态。
+        """
         i = 0
         while i < len(self.pops.offsprings):
+            # offsprings是刚得出训练结果的那一代
             indi = copy.deepcopy(self.pops.offsprings[i])
+            # 在权重向量的邻居中 self.T 邻居个数
             for j in range(self.T):
                 p = int(self.B[i, j])
                 o = copy.deepcopy(self.pops.individuals[p])
-                value_fj = self.gte([indi.error_mean, indi.loss_mean, indi.timecost], self.lamda[p, :], self.z)
-                value_p = self.gte([o.error_mean, o.loss_mean, indi.timecost], self.lamda[p, :], self.z)
+
+                """
+                在MOEA/D算法中GTE:Global Thresholding Elimination是一个用于选择邻居个体的阈值
+                """
+                # 生成的子代的循环 i value_fj子代
+                # 原始, i的表现, 在其第j个邻居位置上的表现
+                value_fj = self.gte([indi.error_mean, indi.timecost], self.lamda[p, :], self.z) # 子问题p..
+                # o. i的 第j个邻居. 在其位置上的表现
+                value_p = self.gte([o.error_mean, o.timecost], self.lamda[p, :], self.z)
+
+                # 然后将其与邻居个体的加权向量进行比较，选择其中最优的一个作为该个体的邻居。
+                """
+                具体来说，邻居向量的选择可以通过以下几种方法实现：
+                Tchebycheff approach：选择在当前个体的参考向量中距离最小的向量作为邻居向量。
+                Neighborhood search approach：从当前个体附近的权重向量中选择若干个向量作为邻居向量。
+                Decomposition-based approach：根据子问题上个体之间的相似度选择邻居向量。
+                通过选择合适的邻居向量，MOEA/D算法可以增加算法搜索空间的覆盖率，从而更好地探索目标函数的全局结构，同时也可以促进算法的多样性和收敛性。
+
+
+                在多目标优化问题中，平衡不同目标函数之间的矛盾是非常关键的。MOEA/D算法采用的一种常见的平衡方法是通过权重向量来平衡不同目标函数之间的关系。
+
+                具体来说，MOEA/D算法生成一组均匀分布的权重向量，这些权重向量在目标函数空间中均匀地分布。每个权重向量都对应一个目标函数组合，表示不同目标函数的权重。在算法的演化过程中，每个个体都会被分配到最接近它的权重向量所代表的目标函数组合。这样，每个个体都会被优化在其所属的目标函数组合下，从而实现了目标函数之间的平衡。
+
+                此外，MOEA/D算法还采用了一种叫做“分解”的技术来平衡不同目标函数之间的关系。分解技术将多目标优化问题转化为多个单目标优化子问题，并通过分别求解这些子问题来获得整个问题的最优解。在MOEA/D算法中，每个子问题对应一个权重向量，每个个体都会被分配到最接近它的权重向量所代表的子问题中进行优化。这样，每个个体都会在多个子问题中参与优化，从而实现了目标函数之间的平衡。
+
+                总之，MOEA/D算法通过权重向量和分解技术来平衡不同目标函数之间的关系，从而实现多目标优化问题的有效求解。
+                """
                 if value_fj < value_p:
                     self.pops.individuals[p] = copy.deepcopy(indi)
+                # 最后，从每个个体的邻居中选择一个作为其父代，并使用交叉和变异操作来生成下一代个体。.. crossover_and_mutation
             i += 1
 
         _file = '%s/ENVI_%05d.txt' % (os.path.join(get_algo_local_dir(), 'populations'), self.pops.gen_no)
