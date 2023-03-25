@@ -46,13 +46,17 @@ def parse_nvidia_info(gpu_enabled_list, nvidia_info):
     # 3. confirm the gpu number according the showed gpus in the string
     num_gpu = 0
     remove_list = []
-    for line in list1:
+    for idx, line in enumerate(list1):
         line_split = line.split()
+        print(line_split)
         if len(line_split) <= 1:
             remove_list.append(line)
         elif line_split[1] == str(num_gpu):
             num_gpu = num_gpu + 1
-        elif line_split[1][-1] != "%":
+        elif line_split[1][-1] != "%" and "100%" not in line_split[0]: # fix 100% error
+            """
+            当占用率为100%时, 分割结果会出错误
+            """
             remove_list.append(line)
     for line in remove_list:
         list1.remove(line)
@@ -99,6 +103,7 @@ def parse_nvidia_info(gpu_enabled_list, nvidia_info):
             job_num_list[job_in_gpu] += 1
 
     # 5. confirm the information of gpus in this machine
+
     gpus_info = []
     for i in range(num_gpu):
         if i not in gpu_enabled_list:
@@ -208,11 +213,20 @@ def locate_gpu_to_be_used():
     available_gpus = get_available_gpus() # from gpu_list from db
     # currently, we randomly select one 
 
+    # _id, worker_ip, gpu_id, ssh_name, ssh_password, ssh_port, task_num = available_gpus[0]
+    # _min_gpu_task_num = task_num
+
+    # gpu_task_list = [0 * len(available_gpus)]
+
+    # for idx, gpu_item in enumerate(available_gpus):
+    #     _id, worker_ip, gpu_id, ssh_name, ssh_password, ssh_port, task_num = gpu_item
+
     if len(available_gpus) == 0:
         Log.info('No available GPUs currently')
         return None
     else:
         # Log.info('%d available GPUs currently'%(len(available_gpus)))
+        # 'select id, worker as worker_ip, gpu_id, ssh_name, ssh_password, ssh_port from gpu_list where alg_name=\'%s\''
         # TODO: 随机选取, 需要更改为task少的在前, left_mem多的在前
         random.shuffle(available_gpus)
         located_gpu = available_gpus[0]
@@ -281,7 +295,7 @@ def run_detect_gpu():
         while True:
             Log.debug('start to periodicity detect GPU ...')
             detect_gpu()
-            time.sleep(50)
+            time.sleep(33)
 
     p = multiprocess.Process(target=fun1, args=())  # start to detect GPUs
     p.start()

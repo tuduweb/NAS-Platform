@@ -203,6 +203,7 @@ class RunModel(object):
         best_error = 100.0
         best_loss = 99999999999999999999999.0
         num_para = 2100000000
+        best_acc = 0.0
         try:
             m = TrainModel(file_id, logger)
             m.log_record(

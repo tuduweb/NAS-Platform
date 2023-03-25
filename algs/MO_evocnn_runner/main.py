@@ -20,31 +20,35 @@ class EvolveCNN(object):
         self.params = params
         self.pops = None
         self.pop_size = params['pop_size']
-        self.M = 2  #the number of targets is 2
+        self.M = 3  #the number of targets is 2
         self.lamda = np.zeros((self.pop_size, self.M))
 
-        # __k = self.pop_size // 2 # 子问题数量, 通常与pop_size相同
-        # _vector = []
-        # for i in range(0, __k):
-        #     for j in range(0, __k):
-        #         for k in range(0, __k):
-        #             if i + j + k == __k:
-        #                 _vector.append([i, j, k])
+        __k = 8 # vector_size -> 42 # self.pop_size // 2 # 子问题数量, 通常与pop_size相同
+        _vector = []
+        for i in range(0, __k):
+            for j in range(0, __k):
+                for k in range(0, __k):
+                    if i + j + k == __k:
+                        _vector.append([i, j, k])
 
-        # _vector_size = len(_vector)
+        _vector_size = len(_vector)
 
-        for i in range(self.pop_size):
-            self.lamda[i][0] = i / self.pop_size
-            self.lamda[i][1] = (self.pop_size - i) / self.pop_size
+        if _vector_size != self.pop_size:
+            print("_vector_size and self.pop_size mismatch")
+            exit(0)
 
-        # # 生成权重向量, 权重向量的数目需要和个体数目对应起来.. 不然后面会报错
-        # self.lamda = np.zeros((_vector_size, self.M))
+        # for i in range(self.pop_size):
+        #     self.lamda[i][0] = i / self.pop_size
+        #     self.lamda[i][1] = (self.pop_size - i) / self.pop_size
 
-        # for idx, values in enumerate(_vector):
-        #     i, k, j = values
-        #     self.lamda[idx][0] = i / __k
-        #     self.lamda[idx][1] = k / __k
-        #     self.lamda[idx][2] = j / __k
+        # 生成权重向量, 权重向量的数目需要和个体数目对应起来.. 不然后面会报错
+        self.lamda = np.zeros((_vector_size, self.M))
+
+        for idx, values in enumerate(_vector):
+            i, k, j = values
+            self.lamda[idx][0] = i / __k
+            self.lamda[idx][1] = k / __k
+            self.lamda[idx][2] = j / __k
         
         # 每一个权重向量的邻居 通常取 $\sqrt{N}$ 或 $N/10$。?
         self.T = int(self.pop_size / 5)
@@ -99,6 +103,14 @@ class EvolveCNN(object):
     # 以不同的比例相乘, 再取最大的
     def gte(self, f, lamda, z):
         return max(lamda * abs(f - z))
+    
+    def timeCostSmaller(self, timecost):
+        # 10ms 0.2
+        return timecost * 0.02
+
+    def lossMeanSmaller(self, lossMean):
+        # 0.1倍缩放
+        return lossMean * 0.1
 
     def initialize_population(self):
         StatusUpdateTool.begin_evolution()
@@ -110,7 +122,7 @@ class EvolveCNN(object):
     def modify_EP(self, indi):
         flag = 1
         j = 0
-        candidate = [indi.error_mean, indi.timecost]
+        candidate = [indi.error_mean, indi.loss_mean, self.timeCostSmaller(indi.timecost)]
         while j < len(self.EP):
             if j >= len(self.EP):
                 break
@@ -143,9 +155,13 @@ class EvolveCNN(object):
         _runnerResourcePath = os.path.realpath(os.path.join(runtime_dir, "runner"))
         _summaryResultPath = os.path.realpath(os.path.join(runtime_dir, "summary"))
 
+        """
+        summary: 运行一次后的统计
+        runnerLog: 执行器的时间消耗数据, 但是没有用到hash, 需要改进
+        runnerMap: name -> uuid的结构
+        """
         _summaryResultSavedUri = os.path.realpath(os.path.join(_summaryResultPath, "summary-gen-%05d.txt" % self.pops.gen_no))
         _runnerLogSavedUri = os.path.realpath(os.path.join(_runnerResourcePath, "runner-%05d.txt" % self.pops.gen_no))
-
         _runnerMapSavedUri = os.path.realpath(os.path.join(_runnerResourcePath, "map-%05d.txt" % self.pops.gen_no))
 
 
@@ -330,10 +346,10 @@ class EvolveCNN(object):
             if indi.error_mean != -1:
                 if self.z[0] > indi.error_mean:
                     self.z[0] = indi.error_mean
-                # if self.z[1] > indi.loss_mean:
-                #     self.z[1] = indi.loss_mean
-                if self.z[1] > indi.timecost:
-                    self.z[1] = indi.timecost
+                if self.z[1] > indi.loss_mean:
+                    self.z[1] = indi.loss_mean
+                if self.z[2] > self.timeCostSmaller(indi.timecost):
+                    self.z[2] = self.timeCostSmaller(indi.timecost)
                 if -1 == self.modify_EP(indi):
                     Log.info('%s has duplicate' % (indi.id))
         Utils.save_EP_after_evaluation(str(self.EP), self.pops.gen_no)
@@ -397,9 +413,9 @@ class EvolveCNN(object):
                 """
                 # 生成的子代的循环 i value_fj子代
                 # 原始, i的表现, 在其第j个邻居位置上的表现
-                value_fj = self.gte([indi.error_mean, indi.timecost], self.lamda[p, :], self.z) # 子问题p..
+                value_fj = self.gte([indi.error_mean, indi.loss_mean, self.timeCostSmaller(indi.timecost)], self.lamda[p, :], self.z) # 子问题p..
                 # o. i的 第j个邻居. 在其位置上的表现
-                value_p = self.gte([o.error_mean, o.timecost], self.lamda[p, :], self.z)
+                value_p = self.gte([o.error_mean, o.loss_mean, self.timeCostSmaller(o.timecost)], self.lamda[p, :], self.z)
 
                 # 然后将其与邻居个体的加权向量进行比较，选择其中最优的一个作为该个体的邻居。
                 """
@@ -422,6 +438,14 @@ class EvolveCNN(object):
                     self.pops.individuals[p] = copy.deepcopy(indi)
                 # 最后，从每个个体的邻居中选择一个作为其父代，并使用交叉和变异操作来生成下一代个体。.. crossover_and_mutation
             i += 1
+
+
+        # 通过上面, 改变了indi的顺序, 记录下来看看
+        for indi in self.pops.individuals:
+            indi_list.append(indi)
+            # v_list.append(indi.error_mean)
+            _t_str = 'Aftr-%s-%.5f-%.5f-%.5f-%s' % (indi.id, indi.error_mean, indi.loss_mean, indi.timecost, indi.uuid()[0])
+            _str.append(_t_str)
 
         _file = '%s/ENVI_%05d.txt' % (os.path.join(get_algo_local_dir(), 'populations'), self.pops.gen_no)
         Utils.write_to_file('\n'.join(_str), _file)

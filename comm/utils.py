@@ -38,8 +38,10 @@ class GPUFitness():
                 #     datas[i]
                 #     fitness_map[line[0]].append(float(datas[i]))
 
-                fitness_map[line[0]].append(float(datas[0]))
-                fitness_map[line[0]].append(float(datas[1]))
+                fitness_map[line[0]].append(float(datas[0])) # error_mean
+                fitness_map[line[0]].append(float(datas[1])) # loss_mean
+
+                fitness_map[line[0]].append(int(datas[2])) # 参数量
 
         f.close()
         return fitness_map

@@ -2,7 +2,7 @@ import sqlite3
 import os
 import time
 from compute.log import Log
-from compute.config import AlgorithmConfig
+from compute.config import AlgorithmConfig, ExecuteConfig
 from compute.file import get_local_path
 
 
@@ -81,6 +81,9 @@ def add_info(gpu_info, info):
     alg_name = alg_config.read_ini_file('name')
     time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
+    excute_config = ExecuteConfig()
+    per_gpu_task_max = int(excute_config.read_ini_file('per_gpu_task_max'))
+
     sql_gpu_list_del = 'delete from gpu_list where alg_name = \'%s\'' % (alg_name)
     Log.debug('Execute sql: %s' % (sql_gpu_list_del))
     cu.execute(sql_gpu_list_del)
@@ -99,15 +102,15 @@ def add_info(gpu_info, info):
         status = each_one['status']
         remark = each_one['remark']
         """
+        根据compute平台读取的, 已经运行的数量, 跟允许最大运行的数量比较, 来决定是否加到"空闲"列表中
+        这里有的问题是, 没有根据负载情况来合理判断添加, 而只是根据了剩余内存的情况盲目让status置0或者1
         task_cnt = 0, 2 can be used
         task_cnt = 1, 1 can be
         task_cnt = 2 cant
         """
         task_cnt = int(each_one['task_cnt'])
-
         task_num = task_cnt
-
-        _per_max = 3
+        _per_max = per_gpu_task_max
 
         if status == 0:
             Log.info("GPU[{gpu_id}] runs task_num {task_cnt}, max {_per_max}"
@@ -133,7 +136,7 @@ def add_info(gpu_info, info):
 def get_available_gpus():
     alg_config = AlgorithmConfig()
     alg_name = alg_config.read_ini_file('name')
-    sql = 'select id, worker as worker_ip, gpu_id, ssh_name, ssh_password, ssh_port from gpu_list where alg_name=\'%s\'' % (
+    sql = 'select id, worker as worker_ip, gpu_id, ssh_name, ssh_password, ssh_port, task_num from gpu_list where alg_name=\'%s\' order by task_num' % (
         alg_name)
     Log.debug('Execute sql: %s' % (sql))
     conn = sqlite3.connect(get_db_path())

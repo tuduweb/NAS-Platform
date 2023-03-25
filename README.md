@@ -57,3 +57,8 @@ $ python main.py
 ```
 $ python init_compute.py
 ```
+
+redis
+```
+docker run --restart=always --log-opt max-size=100m --log-opt max-file=2 -p 6479:6379 --name ob-redis1 -v /home/n504/onebinary/docker-mnt/redis1/redis.conf:/etc/redis/redis.conf -v /home/n504/onebinary/docker-mnt/redis1/data:/data -d redis redis-server /etc/redis/redis.conf  --appendonly yes
+```

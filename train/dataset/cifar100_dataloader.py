@@ -19,7 +19,8 @@ class CIFAR100(BaseDataloader):
     def __init__(self):
         super(CIFAR100, self).__init__()
         self.root = os.path.expanduser('~/dataset/cifar100/')
-        self.input_size = [32, 32, 64]
+        # self.input_size = [32, 32, 64]
+        self.input_size = [32, 32, 3]
         self.out_cls_num = 100
 
     def get_train_dataloader(self):

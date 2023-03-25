@@ -3,3 +3,8 @@ runtime/
 __pycache__
 __init__.py
 *.png
+
+debug*.bin
+debug*.param
+
+*.log

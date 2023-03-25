@@ -108,7 +108,7 @@ class MNIST(BaseDataloader):
         if augment:
             train_transform = transforms.Compose([
                 transforms.RandomCrop(28, padding=4),
-                transforms.RandomHorizontalFlip(),
+                #transforms.RandomHorizontalFlip(), # randomFlip
                 transforms.ToTensor(),
                 normalize,
             ])
@@ -179,7 +179,7 @@ class MNIST(BaseDataloader):
         # define transform
         train_transform = transforms.Compose([
             transforms.RandomCrop(28, padding=4),
-            transforms.RandomHorizontalFlip(),
+            #transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
         ])

@@ -191,6 +191,8 @@ def makedirs(ssh_name, ssh_password, ip, dir_path, port = 22):
 def exec_python(ssh_name, ssh_password, ip, worker_name, py_file, args, python_exec=get_python_exec(), port = 22):
     top_dir = get_top_dest_dir()
     py_file = os.path.join(top_dir, py_file).replace('~',  '/home/' + ssh_name if ssh_name != "root" else "/root")
+    python_exec = python_exec.replace('~',  '/home/' + ssh_name if ssh_name != "root" else "/root")
+
     Log.info('Execute the remote python file [(%s:%s)%s]' % (ip, str(port), py_file))
     _exec_cmd = 'sshpass -p \'%s\' ssh %s@%s -p \'%s\' %s  \'%s\' %s' % (
         ssh_password, ssh_name, ip, str(port), python_exec, py_file,
