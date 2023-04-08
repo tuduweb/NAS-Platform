@@ -15,6 +15,27 @@ import torch.utils.data as tdata
 from train.dataset.dataloader import BaseDataloader
 from compute.log import Log
 
+from torch.utils.data import Dataset, DataLoader
+
+class CustomMNISTDataset(Dataset):
+    def __init__(self, data, targets, transform=None):
+        self.data = data
+        self.targets = targets
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        img, target = self.data[index], self.targets[index]
+
+        # 转换图像数据
+        if self.transform is not None:
+            img = self.transform(img)
+
+        return img, target
+
+
 class MNIST(BaseDataloader):
     def __init__(self):
         super(MNIST, self).__init__()

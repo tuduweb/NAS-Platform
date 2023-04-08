@@ -19,7 +19,7 @@ from train.dataset.cutout import Cutout
 class KMNIST(BaseDataloader):
     def __init__(self):
         super(KMNIST, self).__init__()
-        self.root = os.path.expanduser('~/demo123/MO-ResNet/dataset/kmnist/')
+        self.root = os.path.expanduser('~/dataset/kmnist/')
         self.input_size = [28, 28, 1]
         self.out_cls_num = 10
 
@@ -266,9 +266,9 @@ class KMNIST(BaseDataloader):
 
 
 if __name__ == '__main__':
-    dataset = 'MNIST'
-    root_path = os.path.expanduser('~/demo123/MO-ResNet/dataset/kmnist/')
-    ls_dataset = ['MNIST', 'CIFAR10', 'CIFAR100', 'FashionMNIST']
+    dataset = 'KMNIST'
+    root_path = os.path.expanduser('~/dataset/ddosmnist/')
+    ls_dataset = ['MNIST', 'CIFAR10', 'CIFAR100', 'KMNIST', 'FashionMNIST', 'DDOSMNIST']
     if dataset in ls_dataset:
         from comm.registry import Registry
         dataloader_cls = Registry.DataLoaderRegistry.query(dataset)
@@ -279,37 +279,42 @@ if __name__ == '__main__':
     transform = transforms.Compose([
         transforms.ToTensor(),
     ])
-    trainData = datasets.CIFAR100(root=root_path,
-                      train=True,
-                      transform=transform,
-                      download=True)
-    testData = datasets.CIFAR100(root=root_path,
-                     train=False,
-                     transform=transform,
-                     download=True)
 
-    batch_size = 64
-    trainData_loader = tdata.DataLoader(dataset=trainData,
-                                  batch_size=batch_size,
-                                  shuffle=True)
+    trainData = dataloader_cls_ins.get_train_dataloader()
 
-    testData_loader = tdata.DataLoader(dataset=testData,
-                                 batch_size=batch_size,
-                                 shuffle=True)
+    print(trainData)
 
-    examples = enumerate(trainData_loader)
-    idx, (data, labels) = next(examples)
+    # trainData = datasets.CIFAR100(root=root_path,
+    #                   train=True,
+    #                   transform=transform,
+    #                   download=True)
+    # testData = datasets.CIFAR100(root=root_path,
+    #                  train=False,
+    #                  transform=transform,
+    #                  download=True)
 
-    import matplotlib.pyplot as plt
+    # batch_size = 64
+    # trainData_loader = tdata.DataLoader(dataset=trainData,
+    #                               batch_size=batch_size,
+    #                               shuffle=True)
 
-    fig = plt.figure()
-    for i in range(4):
-        for j in range(4):
-            plt.subplot(4, 4, i * 4 + j + 1)
-            plt.imshow(data[i * 4 + j].permute(1,2,0))
-            plt.xticks([])
-            plt.yticks([])
-    plt.savefig('figure4_4.png')
-    plt.show()
+    # testData_loader = tdata.DataLoader(dataset=testData,
+    #                              batch_size=batch_size,
+    #                              shuffle=True)
+
+    # examples = enumerate(trainData_loader)
+    # idx, (data, labels) = next(examples)
+
+    # import matplotlib.pyplot as plt
+
+    # fig = plt.figure()
+    # for i in range(4):
+    #     for j in range(4):
+    #         plt.subplot(4, 4, i * 4 + j + 1)
+    #         plt.imshow(data[i * 4 + j].permute(1,2,0))
+    #         plt.xticks([])
+    #         plt.yticks([])
+    # plt.savefig('figure4_4.png')
+    # plt.show()
 
 #

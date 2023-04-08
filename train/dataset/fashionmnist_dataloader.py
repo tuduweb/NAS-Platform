@@ -20,7 +20,8 @@ class FashionMNIST(BaseDataloader):
     def __init__(self):
         super(FashionMNIST, self).__init__()
         self.root = os.path.expanduser('~/dataset/fashionmnist/')
-        self.input_size = [32, 32, 64]
+        # self.input_size = [32, 32, 64]
+        self.input_size = [28, 28, 1]
         self.out_cls_num = 10
 
     def get_train_dataloader(self):
@@ -104,7 +105,7 @@ class FashionMNIST(BaseDataloader):
 
         # define transforms
         valid_transform = transforms.Compose([
-            transforms.Pad(2),
+            # transforms.Pad(2),
             transforms.ToTensor(),
             normalize,
         ])
@@ -118,7 +119,8 @@ class FashionMNIST(BaseDataloader):
             ])
             '''
             train_transform = transforms.Compose([
-                transforms.RandomCrop(32, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
+                # transforms.RandomCrop(32, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
+                transforms.RandomCrop(28, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
                 transforms.RandomHorizontalFlip(),  # 图像一半的概率翻转，一半的概率不翻转
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.5], std=[0.5]),  # R,G,B每层的归一化用到的均值和方差
@@ -201,7 +203,7 @@ class FashionMNIST(BaseDataloader):
         ])
         '''
         train_transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
+            transforms.RandomCrop(28, padding=4),  # 先四周填充0，在吧图像随机裁剪成32*32
             transforms.RandomHorizontalFlip(),  # 图像一半的概率翻转，一半的概率不翻转
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.5], std=[0.5]),  # R,G,B每层的归一化用到的均值和方差
@@ -249,7 +251,7 @@ class FashionMNIST(BaseDataloader):
 
         # define transform
         transform = transforms.Compose([
-            transforms.Pad(2),
+            # transforms.Pad(2),
             transforms.ToTensor(),
             normalize,
         ])

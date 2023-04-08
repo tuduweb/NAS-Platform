@@ -166,7 +166,7 @@ def init_work_dir_on_all_workers():
     d = DatasetConfig()
     dataset = d.read_ini_file('_name')
     dset_dir = d.read_ini_file('_dir')
-    ls_dataset = ['MNIST', 'CIFAR10', 'CIFAR100']
+    ls_dataset = ['MNIST', 'CIFAR10', 'CIFAR100', 'FashionMNIST']
     for sec in config.sections():
         worker_name = config.get(sec, 'worker_name')
         worker_ip = config.get(sec, 'worker_ip')
@@ -277,11 +277,11 @@ def transfer_dataset_image(ssh_name, ssh_password, worker_ip, source, port = 22)
     dset_name = source.split('/')[-1]
     try:
         sftp.stat(dset_name)
-
     except:
         sftp.mkdir(dset_name)
 
     for root, subdir, files in os.walk(source):
+        r_d = []
         for dir in subdir:
             r_d = source.split("/")
             local_subdir = os.path.join(root, dir).replace('\\', '/')
